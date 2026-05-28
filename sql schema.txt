@@ -1,0 +1,109 @@
+CREATE DATABASE eam_system;
+USE eam_system;
+CREATE TABLE departments (
+    department_id INT PRIMARY KEY AUTO_INCREMENT,
+    department_name VARCHAR(100) NOT NULL
+);
+INSERT INTO departments (department_name) VALUES
+('IT'),
+('HR'),
+('Finance'),
+('Operations');
+CREATE TABLE employees (
+    employee_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100),
+    department_id INT,
+    FOREIGN KEY (department_id) REFERENCES departments(department_id)
+);
+INSERT INTO employees (name, department_id) VALUES
+('Arun', 1),
+('Kiran', 1),
+('Meena', 2),
+('Ravi', 3),
+('Divya', 4),
+('John', 1);
+CREATE TABLE assets (
+    asset_id INT PRIMARY KEY AUTO_INCREMENT,
+    asset_name VARCHAR(100),
+    cost DECIMAL(10,2),
+    status VARCHAR(50)
+);
+INSERT INTO assets (asset_name, cost, status) VALUES
+('Laptop Dell', 55000, 'Active'),
+('MacBook Pro', 120000, 'Active'),
+('Projector', 30000, 'Inactive'),
+('Office Chair', 5000, 'Active'),
+('Printer HP', 20000, 'Under Maintenance'),
+('Server Rack', 250000, 'Active');
+CREATE TABLE asset_assignments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    asset_id INT,
+    employee_id INT,
+    assigned_date DATE,
+    FOREIGN KEY (asset_id) REFERENCES assets(asset_id),
+    FOREIGN KEY (employee_id) REFERENCES employees(employee_id)
+);
+INSERT INTO asset_assignments (asset_id, employee_id, assigned_date) VALUES
+(1, 1, '2025-01-10'),
+(2, 1, '2025-02-15'),
+(3, 2, '2024-06-20'),
+(4, 3, '2023-12-01'),
+(5, 4, '2025-03-05'),
+(6, 5, '2024-08-25'),
+(1, 2, '2025-04-01');
+CREATE TABLE maintenance (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    asset_id INT,
+    cost DECIMAL(10,2),
+    status VARCHAR(50),
+    maintenance_date DATE,
+    FOREIGN KEY (asset_id) REFERENCES assets(asset_id)
+);
+INSERT INTO maintenance (asset_id, cost, status, maintenance_date) VALUES
+(5, 1500, 'Pending', '2025-05-10'),
+(3, 2000, 'Completed', '2025-01-12'),
+(6, 5000, 'Pending', '2025-04-20'),
+(1, 1200, 'Completed', '2024-12-01');
+
+
+1.SELECT a.asset_id,a.asset_name,COUNT(aa.id) AS total_assignments
+FROM assets a JOIN asset_assignments aa ON a.asset_id = aa.asset_id
+GROUP BY a.asset_id, a.asset_name ORDER BY total_assignments DESC;
+
+2.SELECT e.employee_id,e.name,COUNT(aa.asset_id) AS asset_count FROM employees e
+JOIN asset_assignments aa ON e.employee_id = aa.employee_id
+GROUP BY e.employee_id, e.name HAVING COUNT(aa.asset_id) > 1;
+
+3.SELECT DATE_FORMAT(maintenance_date, '%Y-%m') AS month,SUM(cost) AS total_cost
+FROM maintenance GROUP BY DATE_FORMAT(maintenance_date, '%Y-%m')ORDER BY month;
+
+4.SELECT a.asset_id,a.asset_name
+FROM assets a LEFT JOIN asset_assignments aa ON a.asset_id = aa.asset_id
+GROUP BY a.asset_id, a.asset_name HAVING MAX(aa.assigned_date) IS NULL 
+OR MAX(aa.assigned_date) < DATE_SUB(CURDATE(), INTERVAL 6 MONTH);
+
+5.SELECT (COUNT(DISTINCT aa.asset_id) * 100.0 / COUNT(DISTINCT a.asset_id)) AS utilization_percentage
+FROM assets a LEFT JOIN asset_assignments aa ON a.asset_id = aa.asset_id;
+
+6.SELECT d.department_name,COUNT(aa.asset_id) AS total_assets FROM departments d JOIN employees e 
+ON d.department_id = e.department_id JOIN asset_assignments aa ON e.employee_id = aa.employee_id
+GROUP BY d.department_name;
+
+7.SELECT asset_id,asset_name,cost
+FROM assets ORDER BY cost DESC LIMIT 5;
+
+8.SELECT a.asset_id,a.asset_name,m.status,m.maintenance_date
+FROM assets a JOIN maintenance m ON a.asset_id = m.asset_id
+WHERE m.status = 'Pending';
+
+
+9.SELECT e.employee_id,e.name AS employee_name,a.asset_name,aa.assigned_date
+FROM employees e JOIN asset_assignments aa ON e.employee_id = aa.employee_id
+JOIN assets a ON a.asset_id = aa.asset_id ORDER BY e.employee_id;
+
+
+10.SELECT d.department_name,SUM(a.cost) AS total_asset_value,RANK() OVER (ORDER BY SUM(a.cost) DESC) AS dept_rank
+FROM departments d JOIN employees e ON d.department_id = e.department_id JOIN asset_assignments aa ON e.employee_id = aa.employee_id
+JOIN assets a ON a.asset_id = aa.asset_id GROUP BY d.department_name;
+
+
